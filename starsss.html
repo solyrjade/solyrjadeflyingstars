@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>TikFinity Flying Stars</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000000; /* Solid Black Background */
+            font-family: Arial, sans-serif;
+        }
+
+        /* Test Controls Overlay */
+        #test-controls {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 10000;
+            display: flex;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+        }
+
+        #test-controls input {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #222;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #test-controls button {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: none;
+            background: #ffd700;
+            color: #000;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        #test-controls button:hover {
+            opacity: 0.9;
+        }
+
+        #test-controls button.remove-btn {
+            background: #ff4757;
+            color: #fff;
+        }
+
+        /* Star Animation Container */
+        #star-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            user-select: none;
+            transform: translate(-50%, -50%);
+            transition: none;
+        }
+
+        .star-icon {
+            font-size: 24px;
+            filter:
+                drop-shadow(0 0 4px #fff)
+                drop-shadow(0 0 8px #ffd700);
+            animation: sparkle 1.5s ease-in-out infinite;
+        }
+
+        .username {
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow:
+                0 0 3px black,
+                0 0 6px black;
+        }
+
+        @keyframes sparkle {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.9;
+            }
+            50% {
+                transform: scale(1.18);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- On-Screen Controls for Testing -->
+    <div id="test-controls">
+        <input type="text" id="username-input" placeholder="Enter username..." onkeydown="if(event.key==='Enter') triggerAddStar()">
+        <button onclick="triggerAddStar()">Add Star</button>
+        <button class="remove-btn" onclick="triggerRemoveStar()">Remove Star</button>
+    </div>
+
+    <div id="star-container"></div>
+
+    <script>
+        const container = document.getElementById("star-container");
+        const stars = new Map();
+
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        /* Add a new flying star */
+        function addStar(username) {
+            if (!username || String(username).trim() === "") return;
+            username = String(username).trim();
+
+            if (stars.has(username)) {
+                console.log(username + " already has a star.");
+                return;
+            }
+
+            const element = document.createElement("div");
+            element.className = "star";
+            element.innerHTML = `
+                <span class="star-icon">⭐</span>
+                <span class="username">@${escapeHtml(username)}</span>
+            `;
+            container.appendChild(element);
+
+            const star = {
+                element: element,
+                x: random(50, window.innerWidth - 50),
+                y: random(50, window.innerHeight - 50),
+                vx: random(-0.45, 0.45),
+                vy: random(-0.45, 0.45)
+            };
+
+            if (Math.abs(star.vx) < 0.15) {
+                star.vx = star.vx < 0 ? -0.25 : 0.25;
+            }
+            if (Math.abs(star.vy) < 0.15) {
+                star.vy = star.vy < 0 ? -0.25 : 0.25;
+            }
+
+            stars.set(username, star);
+            element.style.left = star.x + "px";
+            element.style.top = star.y + "px";
+            console.log("Created star for @" + username);
+        }
+
+        /* Remove an existing star */
+        function removeStar(username) {
+            if (!username || String(username).trim() === "") return;
+            username = String(username).trim();
+
+            if (!stars.has(username)) {
+                console.log("No star found for @" + username);
+                return;
+            }
+
+            const star = stars.get(username);
+            star.element.remove();
+            stars.delete(username);
+            console.log("Removed star for @" + username);
+        }
+
+        /* Animation Loop */
+        function animate() {
+            stars.forEach((star) => {
+                star.x += star.vx;
+                star.y += star.vy;
+
+                const width = star.element.offsetWidth || 80;
+                const height = star.element.offsetHeight || 30;
+
+                // Bounce off left/right bounds
+                if (star.x <= width / 2) {
+                    star.x = width / 2;
+                    star.vx *= -1;
+                }
+                if (star.x >= window.innerWidth - width / 2) {
+                    star.x = window.innerWidth - width / 2;
+                    star.vx *= -1;
+                }
+
+                // Bounce off top/bottom bounds
+                if (star.y <= height / 2) {
+                    star.y = height / 2;
+                    star.vy *= -1;
+                }
+                if (star.y >= window.innerHeight - height / 2) {
+                    star.y = window.innerHeight - height / 2;
+                    star.vy *= -1;
+                }
+
+                star.element.style.left = star.x + "px";
+                star.element.style.top = star.y + "px";
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        /* Safari-safe HTML escaping */
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        /* UI Event Handlers */
+        function triggerAddStar() {
+            const input = document.getElementById("username-input");
+            addStar(input.value);
+            input.value = "";
+        }
+
+        function triggerRemoveStar() {
+            const input = document.getElementById("username-input");
+            removeStar(input.value);
+            input.value = "";
+        }
+
+        /* Handle Window Resizing Gracefully */
+        window.addEventListener("resize", () => {
+            stars.forEach((star) => {
+                const width = star.element.offsetWidth || 80;
+                const height = star.element.offsetHeight || 30;
+                star.x = Math.max(width / 2, Math.min(window.innerWidth - width / 2, star.x));
+                star.y = Math.max(height / 2, Math.min(window.innerHeight - height / 2, star.y));
+            });
+        });
+
+        // Check URL parameters for direct testing (e.g. ?user=TestName)
+        const urlParams = new URLSearchParams(window.location.search);
+        const testUser = urlParams.get('user') || urlParams.get('username');
+        if (testUser) {
+            addStar(testUser);
+        }
+
+        window.addStar = addStar;
+        window.removeStar = removeStar;
+
+        animate();
+    </script>
+
+    <!-- PUSHER WEBSOCKET LISTENER -->
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script>
+        const pusher = new Pusher('285437c51af3ea4665b7', {
+            cluster: 'us2'
+        });
+
+        const channel = pusher.subscribe('star-channel');
+
+        channel.bind('new-follow', function(data) {
+            let username = '';
+            
+            if (typeof data === 'string') {
+                try {
+                    const parsed = JSON.parse(data);
+                    username = parsed.username || parsed.nickname || parsed.uniqueId;
+                } catch(e) {
+                    username = data;
+                }
+            } else if (data && typeof data === 'object') {
+                username = data.username || data.nickname || data.uniqueId;
+            }
+
+            if (username) {
+                addStar(username);
+            }
+        });
+    </script>
+</body>
+</html>
