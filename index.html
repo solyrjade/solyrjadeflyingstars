@@ -48,11 +48,6 @@
             font-weight: bold;
             font-size: 14px;
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        #test-controls button:hover {
-            opacity: 0.9;
         }
 
         #test-controls button.remove-btn {
@@ -75,7 +70,6 @@
             white-space: nowrap;
             user-select: none;
             transform: translate(-50%, -50%);
-            transition: none;
         }
 
         .star-icon {
@@ -92,20 +86,13 @@
         }
 
         @keyframes sparkle {
-            0%, 100% {
-                transform: scale(1);
-                opacity: 0.9;
-            }
-            50% {
-                transform: scale(1.18);
-                opacity: 1;
-            }
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.18); opacity: 1; }
         }
     </style>
 </head>
 <body>
 
-    <!-- On-Screen Controls for Testing -->
     <div id="test-controls">
         <input type="text" id="username-input" placeholder="Enter username..." onkeydown="if(event.key==='Enter') triggerAddStar()">
         <button onclick="triggerAddStar()">Add Star</button>
@@ -118,18 +105,13 @@
         const container = document.getElementById("star-container");
         const stars = new Map();
 
-        function random(min, max) {
-            return Math.random() * (max - min) + min;
-        }
+        function random(min, max) { return Math.random() * (max - min) + min; }
 
         function addStar(username) {
             if (!username || String(username).trim() === "") return;
             username = String(username).trim();
 
-            if (stars.has(username)) {
-                console.log(username + " already has a star.");
-                return;
-            }
+            if (stars.has(username)) return;
 
             const element = document.createElement("div");
             element.className = "star";
@@ -153,17 +135,13 @@
             stars.set(username, star);
             element.style.left = star.x + "px";
             element.style.top = star.y + "px";
-            console.log("Created star for @" + username);
         }
 
         function removeStar(username) {
             if (!username || String(username).trim() === "") return;
             username = String(username).trim();
-
             if (!stars.has(username)) return;
-
-            const star = stars.get(username);
-            star.element.remove();
+            stars.get(username).element.remove();
             stars.delete(username);
         }
 
@@ -171,7 +149,6 @@
             stars.forEach((star) => {
                 star.x += star.vx;
                 star.y += star.vy;
-
                 const width = star.element.offsetWidth || 80;
                 const height = star.element.offsetHeight || 30;
 
@@ -183,17 +160,11 @@
                 star.element.style.left = star.x + "px";
                 star.element.style.top = star.y + "px";
             });
-
             requestAnimationFrame(animate);
         }
 
         function escapeHtml(text) {
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+            return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
         function triggerAddStar() {
@@ -208,51 +179,37 @@
             input.value = "";
         }
 
-        window.addEventListener("resize", () => {
-            stars.forEach((star) => {
-                const width = star.element.offsetWidth || 80;
-                const height = star.element.offsetHeight || 30;
-                star.x = Math.max(width / 2, Math.min(window.innerWidth - width / 2, star.x));
-                star.y = Math.max(height / 2, Math.min(window.innerHeight - height / 2, star.y));
-            });
-        });
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const testUser = urlParams.get('user') || urlParams.get('username');
-        if (testUser) addStar(testUser);
-
-        window.addStar = addStar;
-        window.removeStar = removeStar;
-
         animate();
-    </script>
 
-    <!-- PUSHER WEBSOCKET LISTENER -->
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script>
-        const pusher = new Pusher('285437c51af3ea4665b7', {
-            cluster: 'us2'
-        });
+        // Direct TikFinity Local WebSocket Connection
+        function connectTikFinity() {
+            const ws = new WebSocket("ws://localhost:21213/");
 
-        const channel = pusher.subscribe('star-channel');
+            ws.onopen = () => {
+                console.log("Connected directly to TikFinity!");
+            };
 
-        channel.bind('new-follow', function(data) {
-            let username = '';
-            if (typeof data === 'string') {
+            ws.onmessage = (event) => {
                 try {
-                    const parsed = JSON.parse(data);
-                    username = parsed.username || parsed.nickname || parsed.uniqueId;
-                } catch(e) {
-                    username = data;
+                    const data = JSON.parse(event.data);
+                    
+                    // Trigger star on follow events
+                    if (data.event === "follow" || data.event === "member") {
+                        const user = data.nickname || data.uniqueId || data.username;
+                        if (user) addStar(user);
+                    }
+                } catch (e) {
+                    console.error("Error parsing TikFinity event", e);
                 }
-            } else if (data && typeof data === 'object') {
-                username = data.username || data.nickname || data.uniqueId;
-            }
+            };
 
-            if (username) {
-                addStar(username);
-            }
-        });
+            ws.onclose = () => {
+                // Auto-reconnect if TikFinity restarts
+                setTimeout(connectTikFinity, 3000);
+            };
+        }
+
+        connectTikFinity();
     </script>
 </body>
 </html>
