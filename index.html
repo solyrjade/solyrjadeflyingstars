@@ -11,11 +11,10 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #000000; /* Solid Black Background */
+            background: transparent;
             font-family: Arial, sans-serif;
         }
 
-        /* Test Controls Overlay */
         #test-controls {
             position: fixed;
             top: 15px;
@@ -61,7 +60,6 @@
             color: #fff;
         }
 
-        /* Star Animation Container */
         #star-container {
             position: fixed;
             inset: 0;
@@ -82,9 +80,7 @@
 
         .star-icon {
             font-size: 24px;
-            filter:
-                drop-shadow(0 0 4px #fff)
-                drop-shadow(0 0 8px #ffd700);
+            filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #ffd700);
             animation: sparkle 1.5s ease-in-out infinite;
         }
 
@@ -92,9 +88,7 @@
             color: white;
             font-size: 14px;
             font-weight: bold;
-            text-shadow:
-                0 0 3px black,
-                0 0 6px black;
+            text-shadow: 0 0 3px black, 0 0 6px black;
         }
 
         @keyframes sparkle {
@@ -128,7 +122,6 @@
             return Math.random() * (max - min) + min;
         }
 
-        /* Add a new flying star */
         function addStar(username) {
             if (!username || String(username).trim() === "") return;
             username = String(username).trim();
@@ -154,12 +147,8 @@
                 vy: random(-0.45, 0.45)
             };
 
-            if (Math.abs(star.vx) < 0.15) {
-                star.vx = star.vx < 0 ? -0.25 : 0.25;
-            }
-            if (Math.abs(star.vy) < 0.15) {
-                star.vy = star.vy < 0 ? -0.25 : 0.25;
-            }
+            if (Math.abs(star.vx) < 0.15) star.vx = star.vx < 0 ? -0.25 : 0.25;
+            if (Math.abs(star.vy) < 0.15) star.vy = star.vy < 0 ? -0.25 : 0.25;
 
             stars.set(username, star);
             element.style.left = star.x + "px";
@@ -167,23 +156,17 @@
             console.log("Created star for @" + username);
         }
 
-        /* Remove an existing star */
         function removeStar(username) {
             if (!username || String(username).trim() === "") return;
             username = String(username).trim();
 
-            if (!stars.has(username)) {
-                console.log("No star found for @" + username);
-                return;
-            }
+            if (!stars.has(username)) return;
 
             const star = stars.get(username);
             star.element.remove();
             stars.delete(username);
-            console.log("Removed star for @" + username);
         }
 
-        /* Animation Loop */
         function animate() {
             stars.forEach((star) => {
                 star.x += star.vx;
@@ -192,25 +175,10 @@
                 const width = star.element.offsetWidth || 80;
                 const height = star.element.offsetHeight || 30;
 
-                // Bounce off left/right bounds
-                if (star.x <= width / 2) {
-                    star.x = width / 2;
-                    star.vx *= -1;
-                }
-                if (star.x >= window.innerWidth - width / 2) {
-                    star.x = window.innerWidth - width / 2;
-                    star.vx *= -1;
-                }
-
-                // Bounce off top/bottom bounds
-                if (star.y <= height / 2) {
-                    star.y = height / 2;
-                    star.vy *= -1;
-                }
-                if (star.y >= window.innerHeight - height / 2) {
-                    star.y = window.innerHeight - height / 2;
-                    star.vy *= -1;
-                }
+                if (star.x <= width / 2) { star.x = width / 2; star.vx *= -1; }
+                if (star.x >= window.innerWidth - width / 2) { star.x = window.innerWidth - width / 2; star.vx *= -1; }
+                if (star.y <= height / 2) { star.y = height / 2; star.vy *= -1; }
+                if (star.y >= window.innerHeight - height / 2) { star.y = window.innerHeight - height / 2; star.vy *= -1; }
 
                 star.element.style.left = star.x + "px";
                 star.element.style.top = star.y + "px";
@@ -219,7 +187,6 @@
             requestAnimationFrame(animate);
         }
 
-        /* Safari-safe HTML escaping */
         function escapeHtml(text) {
             return String(text)
                 .replace(/&/g, '&amp;')
@@ -229,7 +196,6 @@
                 .replace(/'/g, '&#039;');
         }
 
-        /* UI Event Handlers */
         function triggerAddStar() {
             const input = document.getElementById("username-input");
             addStar(input.value);
@@ -242,7 +208,6 @@
             input.value = "";
         }
 
-        /* Handle Window Resizing Gracefully */
         window.addEventListener("resize", () => {
             stars.forEach((star) => {
                 const width = star.element.offsetWidth || 80;
@@ -252,12 +217,9 @@
             });
         });
 
-        // Check URL parameters for direct testing (e.g. ?user=TestName)
         const urlParams = new URLSearchParams(window.location.search);
         const testUser = urlParams.get('user') || urlParams.get('username');
-        if (testUser) {
-            addStar(testUser);
-        }
+        if (testUser) addStar(testUser);
 
         window.addStar = addStar;
         window.removeStar = removeStar;
@@ -276,7 +238,6 @@
 
         channel.bind('new-follow', function(data) {
             let username = '';
-            
             if (typeof data === 'string') {
                 try {
                     const parsed = JSON.parse(data);
